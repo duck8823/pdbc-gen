@@ -1,0 +1,14 @@
+MANIFEST
+README.md
+INSTALL.md
+Makefile.PL
+lib/Pdbc/PdbcManager.pm
+lib/Pdbc/PdbcManager/Pg.pm
+lib/Pdbc/Generator.pm
+lib/Pdbc/Generator/Template.pm
+lib/Pdbc/Generator/Type.pm
+lib/Pdbc/Where.pm
+lib/Pdbc/Where/Operator.pm
+lib/Pdbc/Record.pm
+t/pdbc_generator.t
+bin/pdbc-gen.pl
