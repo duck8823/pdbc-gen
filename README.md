@@ -152,7 +152,7 @@ sub new {
 
 sub find_by_ユニークカラム {
 	...
-	return Demo::Entity::Photo->new(%$result);
+	return Hoge::Entity::Hoge->new(%$result);
 }
 
 sub find_all {
