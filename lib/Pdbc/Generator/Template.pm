@@ -181,7 +181,11 @@ sub get_insert_phrase {
 	my \@values;
 	while(my (\$column, \$value) = each (\%\$entity)){
 		push \@columns, \$column;
-		\$value =~ s/'/''/g;
+		unless(\$value =~ /^.+\\(.*\\)\$/m){
+			\$value =~ s/''/'/;
+			\$value =~ s/([\\\\|\\\$|\\\@|\\\'|\\\"])/\\\$1/g;
+			\$value = "'\$value'";
+		}
 		push \@values, \$value;
 	}
 	return "INSERT INTO {{ table }} ( " . join(",", \@columns) . " ) VALUES (" . join(", ", \@values) . ");";
@@ -198,10 +202,14 @@ sub get_update_phrase {
 	my \@values;
 	while(my (\$column, \$value) = each (\%\$entity)){
 		push \@columns, \$column;
-		\$value =~ s/'/''/g;
+		unless(\$value =~ /^.+\\(.*\\)\$/m){
+			\$value =~ s/''/'/;
+			\$value =~ s/([\\\\|\\\$|\\\@|\\\'|\\\"])/\\\$1/g;
+			\$value = "'\$value'";
+		}
 		push \@values, \$value;
 	}
-	return "UPDATE {{ table }} SET ( " . join(",", \@columns) . " ) VALUES (" . join(", ", \@values) . ") WHERE{{{ where }}};";
+	return "UPDATE {{ table }} SET ( " . join(",", \@columns) . " ) VALUES ( " . join(", ", \@values) . ") WHERE{{{ where }}};";
 }
 
 sub get_delete_phrase {
