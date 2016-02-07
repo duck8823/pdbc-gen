@@ -50,7 +50,7 @@ my $records = $pdbc_manager->from('table')
 						->where('Pdbc::Where->new('column_1', 'value_1', EQUAL)
 						    ->and(Pdbc::Where->new('column_2', IS_NOT_NULL)
 						        ->or(Pdbc::Where->new('column_2', '%value_2%', LIKE)))
-						    ->and(Pdbc::Where->new('column_3', 'value_3', EQUAL)
+						    ->and(Pdbc::Where->new('column_3', 'value_3', EQUAL)))
 						->get_result_list();
 while(my $record = shift @$records){
 	print $record->to_string();
@@ -62,5 +62,5 @@ while(my $record = shift @$records){
 データベーススキーマから Entity, Repository, Serviceクラスを自動生成します. 
 ## Usage
 ```sh
-perl -I lib bin\pdbc-gen.pl [-h <host> -p <port>] <database> <target_dir>
+$ perl -I lib bin\pdbc-gen.pl [-h <host> -p <port>] <database> <target_dir>
 ```
