@@ -47,7 +47,7 @@ while(my $record = shift @$records){
 ### 条件の組み合わせ
 ```perl
 my $records = $pdbc_manager->from('table')
-						->where('Pdbc::Where->new('column_1', 'value_1', EQUAL)
+						->where(Pdbc::Where->new('column_1', 'value_1', EQUAL)
 						    ->and(Pdbc::Where->new('column_2', IS_NOT_NULL)
 						        ->or(Pdbc::Where->new('column_2', '%value_2%', LIKE)))
 						    ->and(Pdbc::Where->new('column_3', 'value_3', EQUAL)))
