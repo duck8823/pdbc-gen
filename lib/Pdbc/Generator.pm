@@ -229,7 +229,7 @@ sub build_service {
 
 	my $primary_keys = $self->get_primary_keys();
 	my $has_pkey = @$primary_keys > 0 ? 1 : undef;
-	my $where;
+	my $where = '';
 	while(my $primary_key = shift @$primary_keys){
 		$where .= " AND " . $primary_key->{column} . " = " . "\$entity->{$primary_key->{column}}";
 	}
