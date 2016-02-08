@@ -28,6 +28,8 @@ use Pdbc::Generator;
 use Pdbc::Generator::Type;
 use Pdbc::Where;
 
+use DBD::Pg;
+
 use File::Path;
 use Term::ReadKey;
 
@@ -41,7 +43,7 @@ unless($ARGV[1]){
 my $host = defined $opt_h ? $opt_h : 'localhost';
 my $port = defined $opt_p ? $opt_p : 5432;
 my $database = $ARGV[0];
-push(@INC, $ARGV[1]);
+
 
 print "Enter Database username : ";
 ReadMode "normal";
@@ -62,13 +64,17 @@ my $generator = Pdbc::Generator->new(
 );
 $generator->connect();
 
+my @generated_packages;
+
 my $tables = $generator->get_tables();
 while(my $table = shift @$tables){
-	&generate($table, ENTITY, $generator->from($table)->build_entity());
-	&generate($table, REPOSITORY, $generator->from($table)->build_repository());
-	&generate($table, SERVICE, $generator->from($table)->build_service());
+	push @generated_packages, &generate($table, ENTITY, $generator->from($table)->build_entity());
+	push @generated_packages, &generate($table, REPOSITORY, $generator->from($table)->build_repository());
+	push @generated_packages, &generate($table, SERVICE, $generator->from($table)->build_service());
 }
 $generator->disconnect();
+
+&test($ARGV[1], \@generated_packages);
 
 sub generate {
 	my ($table, $type, $class) = @_;
@@ -85,5 +91,14 @@ sub generate {
 	print FILE $class;
 	close(FILE);
 
-	use_ok($package_name);
+	print "generated module [$package_name]\n";
+	return $package_name;
+}
+
+sub test {
+	my ($inc, $packages) = @_;
+	push(@INC, $inc);
+	while(my $package = shift @$packages){
+		use_ok $package;
+	}
 }
