@@ -168,8 +168,8 @@ sub find_by_condition {
 ### Service
 search - 外部キーを結合してレコードを取得する.  
 get_insert_phrase - INSERT 文  
-get_delete_phrase - プライマリキーによる UPDATE 文
-get_delete_phrase - プライマリキーによる DELETE 文
+get_delete_phrase - プライマリキーによる UPDATE 文  
+get_delete_phrase - プライマリキーによる DELETE 文  
 ```perl
 package Hoge::Service::HogeService; # データベース名::Service::テーブル名
 
@@ -195,4 +195,42 @@ sub get_delete_phrase {
 	my ($entity) = @_;
 	return "DELETE文 FROM hoge WHERE プライマリキー";
 }
+```
+  
+  
+## 生成されたソースの利用例
+エンティティオブジェクトの生成とINSERT文の組み立て
+```perl
+use Hoge::Enyity::FooBar;
+use Hoge::Service::FooBarService qw(get_insert_phrase);
+
+my $entity = Hoge::Entity::FooBar->new(
+	column_1 => 'hoge_1',
+	column_2 => 'hoge_2'
+);
+
+print get_insert_phrase($entity) . "\n";
+```
+  
+```sh
+INSERT INTO foo_bar (primary_key, column_1, column_2) VALUES ('default_value', 'hoge_1', 'hoge_2');
+```
+  
+  
+条件による検索とUPDATE文の組み立て
+```perl
+use Pdbc::Where;
+use Pdbc::Where::Operator;
+
+use Hoge::Service::FooBarService qw(get_update_phrase);
+
+my $foo_bar_service = Hoge::Service::FooBarService->new();
+my $entities = $foo_bar_service->search(Pdbc::Where->new('column_1', 'hoge_1', EQUAL));
+for my $entity (@$entities){
+	$entity->set_column_1('foo_1');
+	print get_update_phrase($entity);
+}
+```
+```sh
+UPDATE foo_bar SET (primary_key, column_1, column_2) VALUES ('default_value', 'foo_1', 'hoge_2') WHERE primary_key = 'default_value';
 ```
