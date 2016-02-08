@@ -98,6 +98,8 @@ sub get_all_columns {
 
 sub get_foreign_keys {
 	my $self = shift;
+	my ($current_loop) = @_;
+	$current_loop = 1 unless($current_loop);
 	my $foreign_manager = Pdbc::Generator->new(
 		%$self
 	);
@@ -117,8 +119,8 @@ sub get_foreign_keys {
 			->includes('table_name','column_name')
 			->where(Pdbc::Where->new('information_schema.key_column_usage.constraint_name', $foreign_key->{unique_constraint_name}, EQUAL))
 			->get_single_result();
-		if(defined $ref){
-			my $ref_ref = $foreign_manager->from($ref->{table_name})->get_foreign_keys();
+		if(defined $ref && $current_loop <= 1){
+			my $ref_ref = $foreign_manager->from($ref->{table_name})->get_foreign_keys(++$current_loop);
 			$ref->{foreign_keys} = $ref_ref;
 		}
 		$foreign_key->{ref} = $ref;
