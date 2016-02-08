@@ -119,6 +119,10 @@ sub find_by_condition {
 	my \$result = \$self->from('{{ table }}')
 		->where(\$where)
 		->get_result_list();
+	if(\@\$result == 1){
+		my \$result = shift \@\$result;
+		return {{ entity_package }}->new(%\$result);
+	}
 	my \@records;
 	while(my \$result = shift \@\$result){
 		push \@records, {{ entity_package }}->new(%\$result);
@@ -165,6 +169,9 @@ sub search {
 	my (\$where, \$options) = \@_;
 	my \${{ table }}s = \$self->{repository}->find_by_condition(\$where, \$options);
 	for my \${{ table }}(\@\${{ table }}s){
+		{{# foreign_variables }}
+		my (\${{ valiable_name }}, \${{ valiable_name }}_repository);
+		{{/ foreign_variables }}
 {{{ foreign_bind }}}
 	}
 	\$self->{repository}->disconnect();
@@ -229,13 +236,19 @@ EOS
 sub FOREIGN_TMP {
 return <<"EOS";
 
-		my \${{ ref_table }}_repository = {{ ref_repository }}->new();
+		{{# parent }}
+		for \${{{ root }}} (\${{{ parent }}}){
+		{{/ parent }}
+		\${{ ref_table }}_repository = {{ ref_repository }}->new();
 		\${{ ref_table }}_repository->connect();
-		my \${{ ref_table }} = \${{ ref_table }}_repository->find_by_condition(Pdbc::Where->new('{{ ref_column }}', {{{ ref_value }}}, EQUAL)) if({{{ ref_value }}});
+		\${{ ref_table }} = \${{ ref_table }}_repository->find_by_condition(Pdbc::Where->new('{{ ref_column }}', {{{ ref_value }}}, EQUAL)) if({{{ ref_value }}});
 		\${{ ref_table }}_repository->disconnect();
 		{{=<% %>=}}
-		\$<% root %>->{<% ref_table %>} = \$<% ref_table %>;
+		\$<%& root %>->{<%& ref_table %>} = \$<%& ref_table %>;
 		<%={{ }}=%>
+		{{# parent }}
+		}
+		{{/ parent }}
 EOS
 }
 

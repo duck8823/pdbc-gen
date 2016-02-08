@@ -11,6 +11,7 @@ use Pdbc::Where::Operator;
 use Pdbc::Generator::Template;
 use Pdbc::Generator::Type;
 use Template::Mustache;
+use List::MoreUtils;
 
 sub get_tables {
 	my $self = shift;
@@ -64,7 +65,6 @@ sub get_default_values {
 		defined $column_info->{column_default} or next;
 		my $value = $column_info->{column_default};
 		unless($value =~ /^.+\(.*\)$/m){
-			print "test\n";
 			$value =~ s/''/'/;
 			$value =~ s/([\\|\$|\@|\'|\"])/\\$1/g;
 			$value = "'$value'";
@@ -105,23 +105,36 @@ sub get_foreign_keys {
 	);
 	$foreign_manager->clear_condition();
 	$foreign_manager->connect();
-	my $result = $foreign_manager->from('information_schema.table_constraints')
-		->includes('information_schema.table_constraints.constraint_name', 'information_schema.key_column_usage.table_name', 'information_schema.key_column_usage.column_name', 'information_schema.referential_constraints.unique_constraint_name')
-		->left_outer_join('information_schema.referential_constraints', Pdbc::Where->new('information_schema.table_constraints.constraint_name', 'information_schema.referential_constraints.constraint_name', EQUAL))
-		->left_outer_join('information_schema.key_column_usage', Pdbc::Where->new('information_schema.table_constraints.constraint_name', 'information_schema.key_column_usage.constraint_name', EQUAL))
-		->where(Pdbc::Where->new('information_schema.table_constraints.constraint_schema', 'public', EQUAL)
-			->and(Pdbc::Where->new('information_schema.table_constraints.constraint_type', 'FOREIGN KEY', EQUAL)
-				->and(Pdbc::Where->new('information_schema.table_constraints.table_name', $self->{from}, EQUAL))))
-		->get_result_list();
+
+	my $result;
+	my $dbh = DBI->connect("dbi:Pg:dbname=$self->{database};host=$self->{host};port=$self->{port}",
+						  $self->{user},
+						  $self->{password},
+						  { AutoCommit => 0 }
+	);
+	my $sth = $dbh->foreign_key_info(undef, undef, undef, undef, undef, $self->{from});
+	my $records = $sth->fetchall_arrayref(+{}) if defined($sth);
+	$dbh->disconnect();
+	while(my $record = shift @$records){
+		push @$result, Pdbc::Record->new(
+				constraint_name	=> $record->{FK_NAME},
+				table_name		=> $record->{FK_TABLE_NAME},
+				column_name		=> $record->{FK_COLUMN_NAME},
+				unique_constraint_name => $record->{UK_NAME},
+				ref => {
+					constraint_name	=> $record->{UK_NAME},
+					table_name		=> $record->{UK_TABLE_NAME},
+					column_name		=> $record->{UK_COLUMN_NAME}
+				}
+			);
+	}
+	$current_loop++;
 	my @forein_keys;
 	while(my $foreign_key = shift @$result){
-		my $ref = $foreign_manager->from('information_schema.key_column_usage')
-			->includes('table_name','column_name')
-			->where(Pdbc::Where->new('information_schema.key_column_usage.constraint_name', $foreign_key->{unique_constraint_name}, EQUAL))
-			->get_single_result();
-		if(defined $ref && $current_loop <= 1){
-			my $ref_ref = $foreign_manager->from($ref->{table_name})->get_foreign_keys(++$current_loop);
-			$ref->{foreign_keys} = $ref_ref;
+		my $ref = $foreign_key->{ref};
+		if(defined $ref && $foreign_key->{table_name} ne $ref->{table_name} && $current_loop <= 2){
+			my $ref_foreign_keys = $foreign_manager->from($ref->{table_name})->get_foreign_keys($current_loop);
+			$ref->{foreign_keys} = $ref_foreign_keys;
 		}
 		$foreign_key->{ref} = $ref;
 		push @forein_keys, $foreign_key;
@@ -155,6 +168,7 @@ sub get_unique_keys {
 
 sub get_primary_keys {
 	my $self = shift;
+
 	my $primary_manager = Pdbc::Generator->new(
 		%$self
 	);
@@ -222,11 +236,20 @@ sub build_service {
 
 	my $package = $self->build_package_name(SERVICE);
 	my $foreign_keys = $self->get_foreign_keys();
-	my @foreign_packages;
+	my $foreign_packages;
 	for my $foreign_key (@$foreign_keys){
 		my $ref_table = $foreign_key->{ref}->{table_name};
-		push @foreign_packages, { package_name => Pdbc::Generator->new( %$self )->from( $ref_table )->build_package_name( REPOSITORY )};
+		my $package_name = Pdbc::Generator->new( %$self )->from( $ref_table )->build_package_name( REPOSITORY );
+		$foreign_packages->{$package_name} = { package_name => $package_name};
 	}
+	my $uniq_names = &unique_foreign_table($foreign_keys);
+	my $foreign_valiables;
+
+	while(my $uniq_name = shift @$uniq_names){
+		push @$foreign_valiables, { valiable_name => $uniq_name };
+	}
+
+	my @foreign_packages = values %$foreign_packages;
 	my $foreign_bind = $self->build_foreign_bind($self->{from}, $foreign_keys);
 
 	my $primary_keys = $self->get_primary_keys();
@@ -249,7 +272,8 @@ sub build_service {
 			foreign_bind=> $foreign_bind,
 			entity_package => $entity_package,
 			repository_package => $repository_package,
-			foreign_packages => \@foreign_packages
+			foreign_packages => \@foreign_packages,
+			foreign_variables => $foreign_valiables
 		});
 }
 
@@ -257,22 +281,41 @@ sub build_foreign_bind {
 	my $self = shift;
 	my $bind = '';
 	my $mutache = Template::Mustache->new();
-	my ($root, $foreign_keys) = @_;
-	while(my $foreign_key = shift @$foreign_keys){
+	my ($root, $foreign_keys, $parent) = @_;
+	my @binded;
+	for my $foreign_key (@$foreign_keys){
 		my $ref_table = $foreign_key->{ref}->{table_name};
-		my $ref_repository = Pdbc::Generator->new(%$self)->from($ref_table)->build_package_name(REPOSITORY);
-		$bind .= $mutache->render(FOREIGN_TMP, {
-					root => $root,
-					ref_table => $ref_table,
+		my $ref_repository = Pdbc::Generator->new( %$self )->from( $ref_table )->build_package_name( REPOSITORY );
+		unless (grep { $_ eq $ref_repository } @binded) {
+			$bind .= $mutache->render( FOREIGN_TMP, {
+					root           => $root,
+					ref_table      => $ref_table,
 					ref_repository => $ref_repository,
-					ref_column => $ref_table.".".$foreign_key->{ref}->{column_name},
-					ref_value => "\$$root\->{$foreign_key->{column_name}}"
-				});
-		if(defined $foreign_key->{ref}->{foreign_keys}){
-			$bind .= build_foreign_bind($ref_table, $foreign_key->{ref}->{foreign_keys});
+					ref_column     => $ref_table.".".$foreign_key->{ref}->{column_name},
+					ref_value      => "\$$root\->{$foreign_key->{column_name}}",
+					parent         => $parent
+				} );
+			push @binded, $ref_repository;
+		}
+		my $ref_foreign_keys = $foreign_key->{ref}->{foreign_keys};
+		if(defined $ref_foreign_keys){
+			$bind .= $self->build_foreign_bind($ref_table, $ref_foreign_keys, "$root\->{$ref_table}");
 		}
 	}
 	return $bind;
+}
+
+sub unique_foreign_table {
+	my ($foreign_keys, $arr) = @_;
+	for my $foreign_key (@$foreign_keys){
+		push @$arr, $foreign_key->{ref}->{table_name};
+		my $ref_foreign_keys = $foreign_key->{ref}->{foreign_keys};
+		if(defined $ref_foreign_keys){
+			&unique_foreign_table($ref_foreign_keys, $arr);
+		}
+	}
+	@$arr = List::MoreUtils::uniq @$arr;
+	return $arr;
 }
 
 1;
