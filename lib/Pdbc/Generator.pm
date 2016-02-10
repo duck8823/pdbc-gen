@@ -3,8 +3,8 @@ package Pdbc::Generator;
 use strict;
 use warnings FATAL => 'all';
 
-use Pdbc::PdbcManager::Pg;
-our @ISA = qw(Pdbc::PdbcManager::Pg);
+use Pdbc::PdbcManager;
+our @ISA = qw(Pdbc::PdbcManager);
 our @EXPORT = qw();
 
 use Pdbc::Where::Operator;

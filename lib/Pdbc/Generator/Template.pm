@@ -68,8 +68,8 @@ package {{ package }};
 use strict;
 use warnings;
 
-use Pdbc::PdbcManager::Pg;
-our \@ISA = qw(Pdbc::PdbcManager::Pg);
+use Pdbc::PdbcManager;
+our \@ISA = qw(Pdbc::PdbcManager);
 
 use Pdbc::Where::Operator;
 use {{ entity_package }};
