@@ -119,10 +119,6 @@ sub find_by_condition {
 	my \$result = \$self->from('{{ table }}')
 		->where(\$where)
 		->get_result_list();
-	if(\@\$result == 1){
-		my \$result = shift \@\$result;
-		return {{ entity_package }}->new(%\$result);
-	}
 	my \@records;
 	while(my \$result = shift \@\$result){
 		push \@records, {{ entity_package }}->new(%\$result);
