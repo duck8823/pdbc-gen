@@ -86,7 +86,7 @@ sub new {
 	return bless \$self, ref(\$pkg) || \$pkg;
 }
 
-{{# unique_keys }}
+{{# primary_keys }}
 sub find_by_{{ column }} {
 	my \$self = shift;
 	my (\$value) = \@_;
@@ -95,7 +95,7 @@ sub find_by_{{ column }} {
 		->get_single_result();
 	return {{ entity_package }}->new(%\$result);
 }
-{{/ unique_keys }}
+{{/ primary_keys }}
 
 sub find_all {
 	my \$self = shift;

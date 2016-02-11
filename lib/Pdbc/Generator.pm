@@ -15,35 +15,31 @@ use List::MoreUtils;
 
 sub get_tables {
 	my $self = shift;
-	my $table_manager = Pdbc::Generator->new(%$self);
-	$table_manager->clear_condition();
-	$table_manager->connect();
 	my @tables;
-	my $result = $table_manager->from('information_schema.tables')
-					->includes('table_name')
-					->where(Pdbc::Where->new('table_schema', 'public', EQUAL)
-						->and(Pdbc::Where->new('table_type', 'BASE TABLE', EQUAL)))
-					->get_result_list();
-	$table_manager->disconnect();
-	while(my $table = shift @$result){
-		push @tables, $table->get('table_name');
+	my $sth = $self->{connect}->table_info(undef, "public", undef, "TABLE");
+	my $records = $sth->fetchall_arrayref(+{}) if defined($sth);
+	while(my $record = shift @$records){
+		push @tables, $record->{TABLE_NAME};
 	}
-	$self->clear_condition();
 	return \@tables;
 }
 
 sub get_columns_info {
 	my $self = shift;
-	my $constraint_manager = Pdbc::Generator->new(%$self);
-	$constraint_manager->clear_condition();
-	$constraint_manager->connect();
-	my $result = $constraint_manager->from('INFORMATION_SCHEMA.COLUMNS')
-					->includes('table_name', 'column_name', 'column_default', 'is_nullable', 'data_type')
-					->where(Pdbc::Where->new('table_schema', 'public', EQUAL)
-						->and(Pdbc::Where->new('table_name', $self->{from}, EQUAL)))
-					->get_result_list();
-	$constraint_manager->disconnect();
-	return $result;
+	my @columns_info;
+	my $sth = $self->{connect}->column_info(undef, undef, $self->{from}, undef);
+	my $columns = $sth->fetchall_arrayref(+{});
+	for my $column (@$columns){
+		my $column_info = {
+			table_name		=> $column->{TABLE_NAME},
+			column_name		=> $column->{COLUMN_NAME},
+			column_default	=> $column->{COLUMN_DEF},
+			is_nullable		=> $column->{NULLABLE},
+			data_type		=> $column->{TYPE_NAME}
+		};
+		push @columns_info, $column_info;
+	}
+	return \@columns_info;
 }
 
 sub build_package_name {
@@ -80,7 +76,7 @@ sub get_not_null_columns {
 	my @columns;
 	my $columns_info = $self->get_columns_info();
 	while(my $column_info = shift @$columns_info ){
-		push @columns, { column => $column_info->{column_name} } if($column_info->{is_nullable} eq 'NO');
+		push @columns, { column => $column_info->{column_name} } unless($column_info->{is_nullable});
 	}
 	return \@columns;
 }
@@ -100,21 +96,9 @@ sub get_foreign_keys {
 	my $self = shift;
 	my ($current_loop) = @_;
 	$current_loop = 1 unless($current_loop);
-	my $foreign_manager = Pdbc::Generator->new(
-		%$self
-	);
-	$foreign_manager->clear_condition();
-	$foreign_manager->connect();
-
 	my $result;
-	my $dbh = DBI->connect("dbi:Pg:dbname=$self->{database};host=$self->{host};port=$self->{port}",
-						  $self->{user},
-						  $self->{password},
-						  { AutoCommit => 0 }
-	);
-	my $sth = $dbh->foreign_key_info(undef, undef, undef, undef, undef, $self->{from});
+	my $sth = $self->{connect}->foreign_key_info(undef, undef, undef, undef, undef, $self->{from});
 	my $records = $sth->fetchall_arrayref(+{}) if defined($sth);
-	$dbh->disconnect();
 	while(my $record = shift @$records){
 		push @$result, Pdbc::Record->new(
 				constraint_name	=> $record->{FK_NAME},
@@ -133,59 +117,24 @@ sub get_foreign_keys {
 	while(my $foreign_key = shift @$result){
 		my $ref = $foreign_key->{ref};
 		if(defined $ref && $foreign_key->{table_name} ne $ref->{table_name} && $current_loop <= 2){
-			my $ref_foreign_keys = $foreign_manager->from($ref->{table_name})->get_foreign_keys($current_loop);
+			my $ref_foreign_keys = $self->from($ref->{table_name})->get_foreign_keys($current_loop);
 			$ref->{foreign_keys} = $ref_foreign_keys;
 		}
 		$foreign_key->{ref} = $ref;
 		push @forein_keys, $foreign_key;
 	}
-	$foreign_manager->disconnect();
 	return \@forein_keys;
-}
-
-sub get_unique_keys {
-	my $self = shift;
-	my $unique_manager = Pdbc::Generator->new(
-		%$self
-	);
-	$unique_manager->clear_condition();
-	$unique_manager->connect();
-	my $result = $unique_manager->from('information_schema.table_constraints')
-		->includes('information_schema.key_column_usage.table_name', 'information_schema.key_column_usage.column_name')
-		->left_outer_join('information_schema.key_column_usage', Pdbc::Where->new('information_schema.table_constraints.constraint_name', 'information_schema.key_column_usage.constraint_name', EQUAL))
-		->where(Pdbc::Where->new('information_schema.table_constraints.constraint_schema', 'public', EQUAL)
-			->and(Pdbc::Where->new('information_schema.table_constraints.constraint_type', 'UNIQUE KEY', EQUAL)
-				->or(Pdbc::Where->new('information_schema.table_constraints.constraint_type', 'PRIMARY KEY', EQUAL)))
-			->and(Pdbc::Where->new('information_schema.table_constraints.table_name', $self->{from}, EQUAL)))
-		->get_result_list();
-	my @unique_keys;
-	while(my $record = shift @$result){
-		push @unique_keys, { column => $record->{'column_name'}};
-	}
-	$unique_manager->disconnect();
-	return \@unique_keys;
 }
 
 sub get_primary_keys {
 	my $self = shift;
 
-	my $primary_manager = Pdbc::Generator->new(
-		%$self
-	);
-	$primary_manager->clear_condition();
-	$primary_manager->connect();
-	my $result = $primary_manager->from('information_schema.table_constraints')
-		->includes('information_schema.key_column_usage.table_name', 'information_schema.key_column_usage.column_name')
-		->left_outer_join('information_schema.key_column_usage', Pdbc::Where->new('information_schema.table_constraints.constraint_name', 'information_schema.key_column_usage.constraint_name', EQUAL))
-		->where(Pdbc::Where->new('information_schema.table_constraints.constraint_schema', 'public', EQUAL)
-			->and(Pdbc::Where->new('information_schema.table_constraints.constraint_type', 'PRIMARY KEY', EQUAL))
-			->and(Pdbc::Where->new('information_schema.table_constraints.table_name', $self->{from}, EQUAL)))
-		->get_result_list();
 	my @primary_keys;
-	while(my $record = shift @$result){
-		push @primary_keys, { column => $record->{'column_name'}};
+	my $sth = $self->{connect}->primary_key_info(undef, undef, $self->{from});
+	my $records = $sth->fetchall_arrayref(+{});
+	while( my $record = shift @$records){
+		push @primary_keys, {column => $record->{COLUMN_NAME}};
 	}
-	$primary_manager->disconnect();
 	return \@primary_keys;
 }
 
@@ -211,23 +160,21 @@ sub build_repository {
 
 	my $package = $self->build_package_name(REPOSITORY);
 	my $constractor = [
+		{name => 'driver', value => $self->{driver}},
 		{name => 'host', value => $self->{host}},
 		{name => 'port', value => $self->{port}},
 		{name => 'database', value=> $self->{database}},
 		{name => 'user', value => $self->{user}},
 		{name => 'password', value => $self->{password}}
 	];
-	my $unique_keys = $self->get_unique_keys();
-	my $table = $self->{from};
-	my $entity_package = $self->build_package_name(ENTITY);
 
 	my $mustache = Template::Mustache->new();
 	return $mustache->render(REPOSITORY_TMP, {
 			package		=> $package,
 			constractor	=> $constractor,
-			unique_keys	=> $unique_keys,
-			table		=> $table,
-			entity_package => $entity_package
+			primary_keys	=> $self->get_primary_keys(),
+			table		=> $self->{from},
+			entity_package => $self->build_package_name(ENTITY)
 		});
 }
 
@@ -239,7 +186,7 @@ sub build_service {
 	my $foreign_packages;
 	for my $foreign_key (@$foreign_keys){
 		my $ref_table = $foreign_key->{ref}->{table_name};
-		my $package_name = Pdbc::Generator->new( %$self )->from( $ref_table )->build_package_name( REPOSITORY );
+		my $package_name = &build_package_name({database => $self->{database}, from => $ref_table}, REPOSITORY );
 		$foreign_packages->{$package_name} = { package_name => $package_name};
 	}
 	my $uniq_names = &unique_foreign_table($foreign_keys);
@@ -285,7 +232,7 @@ sub build_foreign_bind {
 	my @binded;
 	for my $foreign_key (@$foreign_keys){
 		my $ref_table = $foreign_key->{ref}->{table_name};
-		my $ref_repository = Pdbc::Generator->new( %$self )->from( $ref_table )->build_package_name( REPOSITORY );
+		my $ref_repository = &build_package_name({database => $self->{database}, from => $ref_table}, REPOSITORY);
 		unless (grep { $_ eq $ref_repository } @binded) {
 			$bind .= $mutache->render( FOREIGN_TMP, {
 					root           => $root,

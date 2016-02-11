@@ -160,17 +160,14 @@ sub get_columns {
 				push @fetch_tables, $inner_join->{table};
 			}
 		}
-		my $colomn_manager = Pdbc::PdbcManager->new( %$self );
-		$colomn_manager->connect();
 
 		while(my $fetch_table = shift @fetch_tables){
-			my $sth = $colomn_manager->{connect}->statistics_info(undef, undef, $fetch_table);
+			my $sth = $self->{connect}->column_info(undef, undef, $fetch_table, undef);
 			my $records = $sth->fetchall_arrayref(+{});
 			while(my $record = shift @$records){
-				push @col, $record->{COLUMN_NAME};
+				push @col, $record->{COLUMN_NAME} if $record->{COLUMN_NAME};
 			}
 		}
-		$colomn_manager->disconnect();
 	} else {
 		@col = @{$self->{includes}};
 	}
@@ -179,7 +176,6 @@ sub get_columns {
 			@col = grep $_ ne $exclude, @col;
 		}
 	}
-
 	return \@col;
 }
 
