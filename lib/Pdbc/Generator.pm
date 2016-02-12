@@ -30,12 +30,14 @@ sub get_columns_info {
 	my $sth = $self->{connect}->column_info(undef, undef, $self->{from}, undef);
 	my $columns = $sth->fetchall_arrayref(+{});
 	for my $column (@$columns){
+		my $is_number = ($column->{TYPE_NAME} =~ /.*int.*/m);
 		my $column_info = {
 			table_name		=> $column->{TABLE_NAME},
 			column_name		=> $column->{COLUMN_NAME},
 			column_default	=> $column->{COLUMN_DEF},
 			is_nullable		=> $column->{NULLABLE},
-			data_type		=> $column->{TYPE_NAME}
+			is_number		=> $is_number,
+			type			=> $column->{TYPE_NAME}
 		};
 		push @columns_info, $column_info;
 	}
@@ -81,13 +83,24 @@ sub get_not_null_columns {
 	return \@columns;
 }
 
+sub get_number_columns {
+	my $self = shift;
+
+	my @columns;
+	my $columns_info = $self->get_columns_info();
+	while(my $column_info = shift @$columns_info ){
+		push @columns, { column => $column_info->{column_name} } if($column_info->{is_number});
+	}
+	return \@columns;
+}
+
 sub get_all_columns {
 	my $self = shift;
 
 	my @columns;
 	my $columns_info = $self->get_columns_info();
 	while(my $column_info = shift @$columns_info ){
-		push @columns, { column => $column_info->{column_name} };
+		push @columns, { column => $column_info->{column_name}, is_nullable => $column_info->{is_nullable}, is_number => $column_info->{is_number} };
 	}
 	return \@columns;
 }
@@ -145,12 +158,14 @@ sub build_entity {
 	my $defaults = $self->get_default_values();
 	my $not_nulls = $self->get_not_null_columns();
 	my $columns = $self->get_all_columns();
+	my $nums = $self->get_number_columns();
 
 	my $mustache = Template::Mustache->new();
 	return $mustache->render(ENTITY_TMP, {
 			package		=> $package,
 			defaults	=> $defaults,
 			not_null_columns => $not_nulls,
+			number_columns => $nums,
 			columns		=> $columns
 		});
 }

@@ -36,6 +36,12 @@ sub get_{{ column }} {
 sub set_{{ column }} {
 	my \$self = shift;
 	my (\$value) = \@_;
+	{{^ is_nullable }}
+	defined \$value or die "{{ column }} IS NOT NULL.";
+	{{/ is_nullable }}
+	{{# is_number }}
+	defined \$value && \$value !~ /^\\d+\$/m and die "{{ column }} MUST BE A NUMBER.";
+	{{/ is_number }}
 	{{=<% %>=}}
 	\$self->{<% column %>} = \$value;
 	<%={{ }}=%>
@@ -44,14 +50,21 @@ sub set_{{ column }} {
 {{/ columns }}
 sub is_valid {
 	my \$self = shift;
-	my \@errors = ();
+	my \@not_null_errors = ();
 	{{# not_null_columns }}
 	{{=<% %>=}}
-	defined \$self->{<% column %>} or push \@errors, '<% column %>';
+	defined \$self->{<% column %>} or push \@not_null_errors, '<% column %>';
 	<%={{ }}=%>
 	{{/ not_null_columns }}
-	if(\@errors > 0){
-		print STDERR join(", ", \@errors) . " IS NOT NULL\\n";
+	my \@num_errors = ();
+	{{# number_columns }}
+	{{=<% %>=}}
+	defined \$self->{<% column %>} && \$self->{<% column %>} !~ /^\\d+\$/m and push \@num_errors, '<% column %>';
+	<%={{ }}=%>
+	{{/ number_columns }}
+	if(scalar \@not_null_errors + scalar \@num_errors > 0){
+		print STDERR join(", ", \@not_null_errors) . " IS NOT NULL\\n" if(\@not_null_errors > 0);
+		print STFERR join(", ", \@num_errors) . " MUST BE A NUMBER\\n" if(\@num_errors > 0);
 		return undef;
 	}
 	return 1;
