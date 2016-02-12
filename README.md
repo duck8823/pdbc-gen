@@ -130,7 +130,7 @@ sub is_valid {
 UNIQUEカラムでの一意検索, 全レコードの取得 および 条件検索  
 書くレコードは対応するエンテティのインスタンスとして返される.  
   
-find_by_ユニークカラム - 一意検索  
+find_by_プライマリキー - 一意検索  
 find_all - 全レコードの取得  
 find_by_condition - 条件検索
 ```perl
@@ -150,7 +150,7 @@ sub new {
 	return bless $self, ref($pkg) || $pkg;
 }
 
-sub find_by_ユニークカラム {
+sub find_by_プライマリキー {
 	...
 	return Hoge::Entity::Hoge->new(%$result);
 }
