@@ -64,7 +64,7 @@ sub is_valid {
 	{{/ number_columns }}
 	if(scalar \@not_null_errors + scalar \@num_errors > 0){
 		print STDERR join(", ", \@not_null_errors) . " IS NOT NULL\\n" if(\@not_null_errors > 0);
-		print STFERR join(", ", \@num_errors) . " MUST BE A NUMBER\\n" if(\@num_errors > 0);
+		print STDERR join(", ", \@num_errors) . " MUST BE A NUMBER\\n" if(\@num_errors > 0);
 		return undef;
 	}
 	return 1;
