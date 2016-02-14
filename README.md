@@ -88,8 +88,8 @@ $ perl -I lib bin\pdbc-gen.pl [-h <host> -p <port>] <database> <target_dir>
 
 ## 生成されるクラス
 ### Entity
-コンストラクタでデフォルト値, NULLチェック  
-ゲッター, セッター
+コンストラクタでデフォルト値, NULL, 型チェック  
+ゲッター, セッター（型チェック）
 ```perl
 package Foo::Entity::Bar; # データベース名::Entity::テーブル名
 
@@ -110,6 +110,7 @@ sub get_カラム名 {
 sub set_カラム名 {
 	my $self = shift;
 	my ($value) = @_;
+	# 数値カラムの場合、数値チェック
 	$self->{foo} = $value;
 }
 
