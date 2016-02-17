@@ -39,9 +39,12 @@ sub set_{{ column }} {
 	{{^ is_nullable }}
 	defined \$value or die "{{ column }} IS NOT NULL.";
 	{{/ is_nullable }}
-	{{# is_number }}
-	defined \$value && \$value !~ /^\\d+\$/m and die "{{ column }} MUST BE A NUMBER.";
-	{{/ is_number }}
+	{{# is_integer }}
+	defined \$value && \$value !~ /^-?\\d+\$/m and die "{{ column }} MUST BE A INTEGER.";
+	{{/ is_integer }}
+	{{# is_point_number }}
+	defined \$value && \$value !~ /^-?\\d+(\\.\\d+)?(e+\\d+)?\$/m and die "{{ column }} MUST BE A POINT NUMBER\\n"";
+	{{/ is_point_number }}
 	{{=<% %>=}}
 	\$self->{<% column %>} = \$value;
 	<%={{ }}=%>
@@ -56,15 +59,22 @@ sub is_valid {
 	defined \$self->{<% column %>} or push \@not_null_errors, '<% column %>';
 	<%={{ }}=%>
 	{{/ not_null_columns }}
-	my \@num_errors = ();
-	{{# number_columns }}
+	my \@integer_errors = ();
+	{{# integer_columns }}
 	{{=<% %>=}}
-	defined \$self->{<% column %>} && \$self->{<% column %>} !~ /^\\d+\$/m and push \@num_errors, '<% column %>';
+	defined \$self->{<% column %>} && \$self->{<% column %>} !~ /^-?\\d+\$/m and push \@integer_errors, '<% column %>';
 	<%={{ }}=%>
-	{{/ number_columns }}
-	if(scalar \@not_null_errors + scalar \@num_errors > 0){
+	{{/ integer_columns }}
+	my \@point_num_errors = ();
+	{{# point_number_columns }}
+	{{=<% %>=}}
+	defined \$self->{<% column %>} && \$self->{<% column %>} !~ /^-?\\d+(\\.\\d+)?(e\\+\\d+)?\$/m and push \@point_num_errors, '<% column %>';
+	<%={{ }}=%>
+	{{/ point_number_columns }}
+	if(scalar \@not_null_errors + scalar \@integer_errors + scalar \@point_num_errors > 0){
 		print STDERR join(", ", \@not_null_errors) . " IS NOT NULL\\n" if(\@not_null_errors > 0);
-		print STDERR join(", ", \@num_errors) . " MUST BE A NUMBER\\n" if(\@num_errors > 0);
+		print STDERR join(", ", \@integer_errors) . " MUST BE A INTEGER\\n" if(\@integer_errors > 0);
+		print STDERR join(", ", \@point_num_errors) . " MUST BE A POINT NUMBER\\n" if(\@point_num_errors > 0);
 		return undef;
 	}
 	return 1;
