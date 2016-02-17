@@ -64,11 +64,6 @@ sub get_default_values {
 	while(my $column_info = shift @$columns_info ){
 		defined $column_info->{column_default} or next;
 		my $value = $column_info->{column_default};
-		unless($value =~ /^.+\(.*\)$/m){
-			$value =~ s/''/'/;
-			$value =~ s/([\\|\$|\@|\'|\"])/\\$1/g;
-			$value = "'$value'";
-		}
 		push @defaults, { column => $column_info->{column_name}, value => $value};
 	}
 	return \@defaults;
