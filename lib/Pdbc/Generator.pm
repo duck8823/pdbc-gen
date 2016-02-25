@@ -152,6 +152,7 @@ sub get_primary_keys {
 
 	my @primary_keys;
 	my $sth = $self->{connect}->primary_key_info(undef, undef, $self->{from});
+	return \@primary_keys unless($sth);
 	my $records = $sth->fetchall_arrayref(+{});
 	while( my $record = shift @$records){
 		push @primary_keys, {column => $record->{COLUMN_NAME}};
@@ -207,6 +208,9 @@ sub build_service {
 	my $self = shift;
 
 	my $package = $self->build_package_name(SERVICE);
+	my $repository_package = $self->build_package_name(REPOSITORY);
+	my $entity_package = $self->build_package_name(ENTITY);
+
 	my $foreign_keys = $self->get_foreign_keys();
 	my $foreign_packages;
 	for my $foreign_key (@$foreign_keys){
@@ -231,9 +235,6 @@ sub build_service {
 		$where .= " AND " . $primary_key->{column} . " = " . "\$entity->{$primary_key->{column}}";
 	}
 	$where =~ s/^\sAND//;
-
-	my $repository_package = $self->build_package_name(REPOSITORY);
-	my $entity_package = $self->build_package_name(ENTITY);
 
 	my $mustache = Template::Mustache->new();
 	return $mustache->render(SERVICE_TMP, {
