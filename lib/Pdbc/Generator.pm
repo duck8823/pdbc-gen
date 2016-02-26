@@ -115,12 +115,13 @@ sub get_all_columns {
 
 sub get_foreign_keys {
 	my $self = shift;
-	my ($current_loop) = @_;
+	my ($base, $current_loop) = @_;
 	$current_loop = 1 unless($current_loop);
 	my $result;
 	my $sth = $self->{connect}->foreign_key_info(undef, undef, undef, undef, undef, $self->{from});
 	my $records = $sth->fetchall_arrayref(+{}) if defined($sth);
 	while(my $record = shift @$records){
+		next if($base eq $record->{UK_TABLE_NAME});
 		push @$result, Pdbc::Record->new(
 				constraint_name	=> $record->{FK_NAME},
 				table_name		=> $record->{FK_TABLE_NAME},
@@ -138,13 +139,60 @@ sub get_foreign_keys {
 	while(my $foreign_key = shift @$result){
 		my $ref = $foreign_key->{ref};
 		if(defined $ref && $foreign_key->{table_name} ne $ref->{table_name} && $current_loop <= 2){
-			my $ref_foreign_keys = $self->from($ref->{table_name})->get_foreign_keys($current_loop);
+			my $ref_foreign_keys = $self->from($ref->{table_name})->get_foreign_keys($base, $current_loop);
 			$ref->{foreign_keys} = $ref_foreign_keys;
+			my $ref_referenced_keys = $self->from($ref->{table_name})->get_referenced_keys($base, $current_loop);
+			$ref->{referenced_keys} = $ref_referenced_keys;
 		}
 		$foreign_key->{ref} = $ref;
 		push @forein_keys, $foreign_key;
 	}
 	return \@forein_keys;
+}
+
+sub get_referenced_keys {
+	my $self = shift;
+	my ($base, $current_loop) = @_;
+	$current_loop = 1 unless($current_loop);
+	my @tables;
+	my $sth = $self->{connect}->foreign_key_info(undef, undef, $self->{from}, undef, undef, undef);
+	my $records = $sth->fetchall_arrayref(+{}) if defined($sth);
+	while(my $record = shift @$records){
+		push @tables, $record->{FK_TABLE_NAME};
+	}
+	@tables = List::MoreUtils::uniq @tables;
+	my $result;
+	while(my $table = shift @tables){
+		$sth = $self->{connect}->foreign_key_info(undef, undef, $self->{from}, undef, undef, $table);
+		$records = $sth->fetchall_arrayref(+{}) if defined($sth);
+		while(my $record = shift @$records){
+			next if($base eq $record->{FK_TABLE_NAME});
+			push @$result, Pdbc::Record->new(
+					constraint_name	=> $record->{UK_NAME},
+					table_name		=> $record->{UK_TABLE_NAME},
+					column_name		=> $record->{UK_COLUMN_NAME},
+					unique_constraint_name => $record->{FK_NAME},
+					ref => {
+						constraint_name	=> $record->{FK_NAME},
+						table_name		=> $record->{FK_TABLE_NAME},
+						column_name		=> $record->{FK_COLUMN_NAME}
+					}
+				);
+		}
+	}
+	my @referenced_keys;
+	while(my $referenced_key = shift @$result){
+		my $ref = $referenced_key->{ref};
+		if(defined $ref && $referenced_key->{table_name} ne $ref->{table_name} && $current_loop <= 2){
+			my $ref_foreign_keys = $self->from($ref->{table_name})->get_foreign_keys($base, $current_loop);
+			$ref->{foreign_keys} = $ref_foreign_keys;
+			my $ref_referenced_keys = $self->from($ref->{table_name})->get_referenced_keys($base, $current_loop);
+			$ref->{referenced_keys} = $ref_referenced_keys;
+		}
+		$referenced_key->{ref} = $ref;
+		push @referenced_keys, $referenced_key;
+	}
+	return \@referenced_keys;
 }
 
 sub get_primary_keys {
@@ -207,26 +255,28 @@ sub build_repository {
 sub build_service {
 	my $self = shift;
 
+	my $base_table = $self->{from};
 	my $package = $self->build_package_name(SERVICE);
 	my $repository_package = $self->build_package_name(REPOSITORY);
 	my $entity_package = $self->build_package_name(ENTITY);
 
-	my $foreign_keys = $self->get_foreign_keys();
-	my $foreign_packages;
-	for my $foreign_key (@$foreign_keys){
-		my $ref_table = $foreign_key->{ref}->{table_name};
-		my $package_name = &build_package_name({database => $self->{database}, from => $ref_table}, REPOSITORY );
-		$foreign_packages->{$package_name} = { package_name => $package_name};
-	}
-	my $uniq_names = &unique_foreign_table($foreign_keys);
-	my $foreign_valiables;
+	my $foreign_keys = $self->get_foreign_keys($base_table);
+	my $referenced_keys = $self->get_referenced_keys($base_table);
 
+	my $uniq_names = &unique_foreign_table($foreign_keys);
+	$uniq_names = &unique_foreign_table($referenced_keys, $uniq_names);
+
+	my $foreign_valiables;
+	my $foreign_packages;
 	while(my $uniq_name = shift @$uniq_names){
-		push @$foreign_valiables, { valiable_name => $uniq_name };
+		push @$foreign_valiables, { valiable_name => "$uniq_name" };
+		my $package_name = &build_package_name({database => $self->{database}, from => $uniq_name}, REPOSITORY );
+		$foreign_packages->{$package_name} = { package_name => $package_name};
 	}
 
 	my @foreign_packages = values %$foreign_packages;
-	my $foreign_bind = $self->build_foreign_bind($self->{from}, $foreign_keys);
+	my $foreign_bind = $self->build_foreign_bind($base_table, $foreign_keys);
+	$foreign_bind .= $self->build_foreign_bind($base_table, $referenced_keys);
 
 	my $primary_keys = $self->get_primary_keys();
 	my $has_pkey = @$primary_keys > 0 ? 1 : undef;
@@ -241,7 +291,7 @@ sub build_service {
 			package		=> $package,
 			has_pkey	=> $has_pkey,
 			where		=> $where,
-			table		=> $self->{from},
+			table		=> $base_table,
 			foreign_bind=> $foreign_bind,
 			entity_package => $entity_package,
 			repository_package => $repository_package,
@@ -279,12 +329,12 @@ sub build_foreign_bind {
 }
 
 sub unique_foreign_table {
-	my ($foreign_keys, $arr) = @_;
-	for my $foreign_key (@$foreign_keys){
+	my ($keys, $arr) = @_;
+	for my $foreign_key (@$keys) {
 		push @$arr, $foreign_key->{ref}->{table_name};
 		my $ref_foreign_keys = $foreign_key->{ref}->{foreign_keys};
-		if(defined $ref_foreign_keys){
-			&unique_foreign_table($ref_foreign_keys, $arr);
+		if (defined $ref_foreign_keys) {
+			&unique_foreign_table( $ref_foreign_keys, $arr );
 		}
 	}
 	@$arr = List::MoreUtils::uniq @$arr;
