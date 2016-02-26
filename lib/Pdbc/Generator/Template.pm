@@ -256,7 +256,9 @@ sub FOREIGN_TMP {
 return <<"EOS";
 
 		{{# parent }}
-		for \${{{ root }}} (\${{{ parent }}}){
+		{{=<% %>=}}
+		for \$<%& root %> (\@{\$<%& parent %>}){
+		<%={{ }}=%>
 		{{/ parent }}
 		\${{ ref_table }}_repository = {{ ref_repository }}->new();
 		\${{ ref_table }}_repository->connect();
