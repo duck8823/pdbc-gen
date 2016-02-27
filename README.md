@@ -1,12 +1,11 @@
 # PDBC Manager
 S2JDBCライクなPerlのDBIインターフェースを作ってみました.  
-Postgresqlで使えます.
   
 ## quick start
 ```perl
-use Pdbc::PdbcManager::Pg;
+use Pdbc::PdbcManager;
 
-my $pdbc_manager = Pdbc::PdbcManager::Pg->new(
+my $pdbc_manager = Pdbc::PdbcManager->new(
 	database	=> 'hoge',
 	user	=> 'user',
 	password	=> 'password'
