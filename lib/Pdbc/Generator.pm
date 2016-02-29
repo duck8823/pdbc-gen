@@ -260,6 +260,14 @@ sub build_service {
 	my $repository_package = $self->build_package_name(REPOSITORY);
 	my $entity_package = $self->build_package_name(ENTITY);
 
+	my $primary_keys = $self->get_primary_keys();
+	my $has_pkey = @$primary_keys > 0 ? 1 : undef;
+	my $where = '';
+	while(my $primary_key = shift @$primary_keys){
+		$where .= " AND " . $primary_key->{column} . " = " . "\$entity->{$primary_key->{column}}";
+	}
+	$where =~ s/^\sAND//;
+
 	my $foreign_keys = $self->get_foreign_keys($base_table);
 	my $referenced_keys = $self->get_referenced_keys($base_table);
 
@@ -277,14 +285,6 @@ sub build_service {
 	my @foreign_packages = values %$foreign_packages;
 	my $foreign_bind = $self->build_foreign_bind($base_table, $foreign_keys);
 	$foreign_bind .= $self->build_foreign_bind($base_table, $referenced_keys);
-
-	my $primary_keys = $self->get_primary_keys();
-	my $has_pkey = @$primary_keys > 0 ? 1 : undef;
-	my $where = '';
-	while(my $primary_key = shift @$primary_keys){
-		$where .= " AND " . $primary_key->{column} . " = " . "\$entity->{$primary_key->{column}}";
-	}
-	$where =~ s/^\sAND//;
 
 	my $mustache = Template::Mustache->new();
 	return $mustache->render(SERVICE_TMP, {
