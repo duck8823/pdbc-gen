@@ -209,7 +209,6 @@ sub get_insert_phrase {
 		push \@columns, \$column;
 		unless(\$value =~ /^.+\\(.*\\)\$/m){
 			\$value =~ s/''/'/;
-			\$value =~ s/([\\\\|\\\$|\\\@|\\\'|\\\"])/\\\$1/g;
 			\$value = "'\$value'";
 		}
 		push \@values, \$value;
@@ -230,7 +229,6 @@ sub get_update_phrase {
 		push \@columns, \$column;
 		unless(\$value =~ /^.+\\(.*\\)\$/m){
 			\$value =~ s/''/'/;
-			\$value =~ s/([\\\\|\\\$|\\\@|\\\'|\\\"])/\\\$1/g;
 			\$value = "'\$value'";
 		}
 		push \@values, \$value;
