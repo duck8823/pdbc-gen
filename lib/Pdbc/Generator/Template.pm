@@ -80,6 +80,17 @@ sub is_valid {
 	return 1;
 }
 
+sub convert_to_table_data {
+	my \$self = shift;
+	my \%clone;
+	{{# columns }}
+	{{=<% %>=}}
+	\$clone{<% column %>} = \$self->{<% column %>};
+	<%={{ }}=%>
+	{{/ columns }}
+	\%\$self = \%clone;
+}
+
 1;
 EOS
 }
@@ -203,6 +214,7 @@ sub get_insert_phrase {
 	if(!defined \$blessed || \$blessed ne '{{ entity_package }}'){
 		die"引数は {{ entity_package }} のインスタンスである必要があります";
 	}
+	\$entity->convert_to_table_data;
 	my \@columns;
 	my \@values;
 	while(my (\$column, \$value) = each (\%\$entity)){
@@ -223,6 +235,7 @@ sub get_update_phrase {
 	if(!defined \$blessed || \$blessed ne '{{ entity_package }}'){
 		die"引数は {{ entity_package }} のインスタンスである必要があります";
 	}
+	\$entity->convert_to_table_data;
 	my \@columns;
 	my \@values;
 	while(my (\$column, \$value) = each (\%\$entity)){
