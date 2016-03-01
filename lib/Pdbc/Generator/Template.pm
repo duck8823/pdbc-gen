@@ -62,13 +62,13 @@ sub is_valid {
 	my \@integer_errors = ();
 	{{# integer_columns }}
 	{{=<% %>=}}
-	defined \$self->{<% column %>} && \$self->{<% column %>} !~ /^-?\\d+\$/m and push \@integer_errors, '<% column %>';
+	defined \$self->{<% column %>} && \$self->{<% column %>} !~ /^-?\\d+\$/m && \$self->{<% column %>} !~ /^.+\\(.*\\)\$/m and push \@integer_errors, '<% column %>';
 	<%={{ }}=%>
 	{{/ integer_columns }}
 	my \@point_num_errors = ();
 	{{# point_number_columns }}
 	{{=<% %>=}}
-	defined \$self->{<% column %>} && \$self->{<% column %>} !~ /^-?\\d+(\\.\\d+)?(e\\+\\d+)?\$/m and push \@point_num_errors, '<% column %>';
+	defined \$self->{<% column %>} && \$self->{<% column %>} !~ /^-?\\d+(\\.\\d+)?(e\\+\\d+)?\$/m && \$self->{<% column %>} !~ /^.+\\(.*\\)\$/m and push \@point_num_errors, '<% column %>';
 	<%={{ }}=%>
 	{{/ point_number_columns }}
 	if(scalar \@not_null_errors + scalar \@integer_errors + scalar \@point_num_errors > 0){
@@ -220,7 +220,7 @@ sub get_insert_phrase {
 	while(my (\$column, \$value) = each (\%\$entity)){
 		push \@columns, \$column;
 		unless(\$value =~ /^.+\\(.*\\)\$/m){
-			\$value =~ s/''/'/;
+			\$value =~ s/'/''/;
 			\$value = "'\$value'";
 		}
 		push \@values, \$value;
@@ -241,7 +241,7 @@ sub get_update_phrase {
 	while(my (\$column, \$value) = each (\%\$entity)){
 		push \@columns, \$column;
 		unless(\$value =~ /^.+\\(.*\\)\$/m){
-			\$value =~ s/''/'/;
+			\$value =~ s/'/''/;
 			\$value = "'\$value'";
 		}
 		push \@values, \$value;
