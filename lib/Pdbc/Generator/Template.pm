@@ -246,9 +246,10 @@ sub get_update_phrase {
 		}
 		push \@values, \$value;
 	}
-	my \$sql = "UPDATE {{ table }} SET \\n";
+	my \$sql = "UPDATE {{ table }} SET ";
 	for(my \$i = 0; \$i < scalar (keys \%\$entity); \$i++){
-		\$sql .= "\t\$columns[\$i] = \$values[\$i], \\n";
+		\$sql .= ", " if(\$i > 0);
+		\$sql .= "\$columns[\$i] = \$values[\$i]";
 	}
 	\$sql .= " WHERE{{{ where }}};";
 	return \$sql;
