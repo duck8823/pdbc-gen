@@ -246,7 +246,12 @@ sub get_update_phrase {
 		}
 		push \@values, \$value;
 	}
-	return "UPDATE {{ table }} SET ( " . join(",", \@columns) . " ) VALUES ( " . join(", ", \@values) . ") WHERE{{{ where }}};";
+	my \$sql = "UPDATE {{ table }} SET \\n";
+	for(my \$i = 0; \$i < scalar (keys \%\$entity); \$i++){
+		\$sql .= "\t\$columns[\$i] = \$values[\$i], \\n";
+	}
+	\$sql .= " WHERE{{{ where }}};";
+	return \$sql;
 }
 
 sub get_delete_phrase {
