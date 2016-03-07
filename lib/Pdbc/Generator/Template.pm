@@ -209,6 +209,7 @@ sub search {
 }
 
 sub get_insert_phrase {
+	my \$self = shift;
 	my (\$entity) = \@_;
 	my \$blessed = Scalar::Util::blessed \$entity;
 	if(!defined \$blessed || \$blessed ne '{{ entity_package }}'){
@@ -230,6 +231,7 @@ sub get_insert_phrase {
 
 {{# has_pkey }}
 sub get_update_phrase {
+	my \$self = shift;
 	my (\$entity) = \@_;
 	my \$blessed = Scalar::Util::blessed \$entity;
 	if(!defined \$blessed || \$blessed ne '{{ entity_package }}'){
@@ -256,6 +258,7 @@ sub get_update_phrase {
 }
 
 sub get_delete_phrase {
+	my \$self = shift;
 	my (\$entity) = \@_;
 	my \$blessed = Scalar::Util::blessed \$entity;
 	if(!defined \$blessed || \$blessed ne '{{ entity_package }}'){
