@@ -85,6 +85,39 @@ sub where {
 	return $self;
 }
 
+sub order {
+	my $self = shift;
+	my ($column, $order) = @_;
+	defined $column && defined $order or die"引数は カラム名, 順序 で指定してください.";
+	my $includes = $self->get_columns;
+	for my $include (@$includes){
+		if($include eq $column){
+			$self->{order} = {
+				column      => $column,
+				asc_or_desc => $order
+			};
+			return $self;
+		}
+	}
+	die"カラムの指定が間違っています $column";
+}
+
+sub limit {
+	my $self = shift;
+	my ($limit) = @_;
+	defined $limit && $limit =~ /^\d+$/m or die"引数は整数で指定してください.";
+	$self->{limit} = $limit;
+	return $self;
+}
+
+sub offset {
+	my $self = shift;
+	my ($offset) = @_;
+	defined $offset && $offset =~ /^\d+$/m or die"引数は整数で指定してください.";
+	$self->{offset} = $offset;
+	return $self;
+}
+
 sub build_select_phrase {
 	my $self = shift;
 	my $left_outer_join = '';
@@ -102,9 +135,14 @@ sub build_select_phrase {
 	}
 	my $columns = defined $self->{includes} ? join(", ", @{$self->{includes}}) : join(", ", @{$self->get_columns()});
 	$columns = '*' unless($columns);
-	my $where = defined $self->{where} ? "WHERE " . $self->{where}->get_phrase() : '';
-	print STDERR "SELECT $columns FROM $self->{from} $left_outer_join $where\n" if($self->{debug});
-	return "SELECT $columns FROM $self->{from} $left_outer_join $where;";
+	my $where  = defined $self->{where}  ? " WHERE "  . $self->{where}->get_phrase() : '';
+	my $offset = defined $self->{offset} ? " OFFSET " . $self->{offset}  : '';
+	my $limit  = defined $self->{limit}  ? " LIMIT "  . $self->{limit}   : '';
+	my $order  = defined $self->{order}  ? " ORDER BY " . $self->{order}->{column} . " " . $self->{order}->{asc_or_desc} : '';
+
+	my $sql = "SELECT $columns FROM $self->{from}$left_outer_join$where$order$offset$limit;";
+	print STDERR "$sql\n" if($self->{debug});
+	return $sql;
 }
 
 sub get_single_result {
@@ -203,6 +241,9 @@ sub clear_condition {
 	delete $self->{includes};
 	delete $self->{excludes};
 	delete $self->{where};
+	delete $self->{limit};
+	delete $self->{offset};
+	delete $self->{order};
 }
 
 1;
