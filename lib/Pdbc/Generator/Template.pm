@@ -160,6 +160,17 @@ sub find_by_condition {
 	return \\\@records;
 }
 
+sub get_last_value {
+	my \$self = shift;
+	my (\$column) = \@_;
+	my \$result = \$self->from('{{ table }}')
+		->includes(\$column)
+		->limit(1)
+		->order(\$column, "DESC NULLS LAST")
+		->get_single_result;
+	return \$result->{\$column};
+}
+
 1;
 EOS
 }
@@ -267,6 +278,16 @@ sub get_delete_phrase {
 	return "DELETE FROM {{ table }} WHERE{{{ where }}};";
 }
 {{/ has_pkey }}
+
+sub get_last_value {
+	my \$self = shift;
+	my (\$column) = \@_;
+
+	\$self->{repository}->connect;
+	my \$result = \$self->{repository}->get_last_value(\$column);
+	\$self->{repository}->disconnect;
+	return \$result;
+}
 
 1;
 EOS
