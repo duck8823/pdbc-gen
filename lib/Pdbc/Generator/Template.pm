@@ -185,11 +185,11 @@ use {{ package_name }};
 
 sub new {
 	my \$pkg = shift;
-	my \$repository = {{ repository_package }}->new();
 	my \$self = {
-		repository => \$repository,
 		\@_
 	};
+	my \$repository = {{ repository_package }}->new(\%{\$self->{repository}});
+	\$self->{repository} = \$repository;
 	return bless \$self, ref(\$pkg) || \$pkg;
 }
 
@@ -246,9 +246,10 @@ sub get_update_phrase {
 		}
 		push \@values, \$value;
 	}
-	my \$sql = "UPDATE {{ table }} SET \\n";
+	my \$sql = "UPDATE {{ table }} SET ";
 	for(my \$i = 0; \$i < scalar (keys \%\$entity); \$i++){
-		\$sql .= "\t\$columns[\$i] = \$values[\$i], \\n";
+		\$sql .= ", " if(\$i > 0);
+		\$sql .= "\$columns[\$i] = \$values[\$i]";
 	}
 	\$sql .= " WHERE{{{ where }}};";
 	return \$sql;
