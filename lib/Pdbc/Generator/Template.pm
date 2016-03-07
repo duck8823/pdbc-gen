@@ -185,11 +185,11 @@ use {{ package_name }};
 
 sub new {
 	my \$pkg = shift;
-	my \$repository = {{ repository_package }}->new();
 	my \$self = {
-		repository => \$repository,
 		\@_
 	};
+	my \$repository = {{ repository_package }}->new(\%{\$self->{repository}});
+	\$self->{repository} = \$repository;
 	return bless \$self, ref(\$pkg) || \$pkg;
 }
 
