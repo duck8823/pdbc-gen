@@ -209,6 +209,7 @@ sub search {
 }
 
 sub get_insert_phrase {
+	my \$self = shift;
 	my (\$entity) = \@_;
 	my \$blessed = Scalar::Util::blessed \$entity;
 	if(!defined \$blessed || \$blessed ne '{{ entity_package }}'){
@@ -219,7 +220,7 @@ sub get_insert_phrase {
 	my \@values;
 	while(my (\$column, \$value) = each (\%\$entity)){
 		push \@columns, \$column;
-		unless(\$value =~ /^.+\\(.*\\)\$/m){
+		if(\$value !~ /^.+\\(.*\\)\$/m && \$value !~ /^'.*'\$/m){
 			\$value =~ s/'/''/;
 			\$value = "'\$value'";
 		}
@@ -230,6 +231,7 @@ sub get_insert_phrase {
 
 {{# has_pkey }}
 sub get_update_phrase {
+	my \$self = shift;
 	my (\$entity) = \@_;
 	my \$blessed = Scalar::Util::blessed \$entity;
 	if(!defined \$blessed || \$blessed ne '{{ entity_package }}'){
@@ -240,7 +242,7 @@ sub get_update_phrase {
 	my \@values;
 	while(my (\$column, \$value) = each (\%\$entity)){
 		push \@columns, \$column;
-		unless(\$value =~ /^.+\\(.*\\)\$/m){
+		if(\$value !~ /^.+\\(.*\\)\$/m && \$value !~ /^'.*'\$/m){
 			\$value =~ s/'/''/;
 			\$value = "'\$value'";
 		}
@@ -256,6 +258,7 @@ sub get_update_phrase {
 }
 
 sub get_delete_phrase {
+	my \$self = shift;
 	my (\$entity) = \@_;
 	my \$blessed = Scalar::Util::blessed \$entity;
 	if(!defined \$blessed || \$blessed ne '{{ entity_package }}'){
