@@ -12,6 +12,7 @@ sub new {
 	my $self = {
 		@_
 	};
+
 	return bless $self, $pkg;
 }
 
