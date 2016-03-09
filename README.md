@@ -76,6 +76,25 @@ while(my $record = shift @$records){
 ```
 includes()とexcludes()は一緒に使えません.  
 includes()が優先されます.  
+### 順序、範囲  
+#### Order By
+```perl
+my $records = $pdbc_manager->from('table')
+						->order("column", "ASC")
+						->get_result_list();
+```  
+#### Offset
+```perl
+my $records = $pdbc_manager->from('table')
+						->offset(10)
+						->get_result_list();
+```  
+#### Offset
+```perl
+my $records = $pdbc_manager->from('table')
+						->limit(1)
+						->get_result_list();
+```  
   
   
 # pdbc-gen  
