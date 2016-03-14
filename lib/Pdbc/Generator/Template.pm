@@ -197,6 +197,7 @@ use {{ package_name }};
 sub new {
 	my \$pkg = shift;
 	my \$self = {
+		standard_conforming_strings = 1,
 		\@_
 	};
 	my \$repository = {{ repository_package }}->new(\%{\$self->{repository}});
@@ -235,7 +236,7 @@ sub get_insert_phrase {
 			\$value = "NULL";
 		} elsif(\$value !~ /^.+\\(.*\\)\$/m && \$value !~ /^'.*'\$/m){
 			\$value =~ s/'/''/;
-			\$value = "'\$value'";
+			\$value = \$self->{standard_conforming_strings} ? "'E\$value'"  : "'\$value'";
 		}
 		push \@values, \$value;
 	}
@@ -259,7 +260,7 @@ sub get_update_phrase {
 			\$value = "NULL";
 		} elsif(\$value !~ /^.+\\(.*\\)\$/m && \$value !~ /^'.*'\$/m){
 			\$value =~ s/'/''/;
-			\$value = "'\$value'";
+			\$value = \$self->{standard_conforming_strings} ? "'E\$value'"  : "'\$value'";
 		}
 		push \@values, \$value;
 	}
