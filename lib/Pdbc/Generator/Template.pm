@@ -231,7 +231,9 @@ sub get_insert_phrase {
 	my \@values;
 	while(my (\$column, \$value) = each (\%\$entity)){
 		push \@columns, \$column;
-		if(\$value !~ /^.+\\(.*\\)\$/m && \$value !~ /^'.*'\$/m){
+		if(!defined \$value){
+			\$value = "NULL";
+		} elsif(\$value !~ /^.+\\(.*\\)\$/m && \$value !~ /^'.*'\$/m){
 			\$value =~ s/'/''/;
 			\$value = "'\$value'";
 		}
@@ -253,7 +255,9 @@ sub get_update_phrase {
 	my \@values;
 	while(my (\$column, \$value) = each (\%\$entity)){
 		push \@columns, \$column;
-		if(\$value !~ /^.+\\(.*\\)\$/m && \$value !~ /^'.*'\$/m){
+		if(!defined \$value){
+			\$value = "NULL";
+		} elsif(\$value !~ /^.+\\(.*\\)\$/m && \$value !~ /^'.*'\$/m){
 			\$value =~ s/'/''/;
 			\$value = "'\$value'";
 		}
