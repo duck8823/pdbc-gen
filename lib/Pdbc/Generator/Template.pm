@@ -125,7 +125,7 @@ sub find_by_{{ column }} {
 	my \$self = shift;
 	my (\$value) = \@_;
 	my \$result = \$self->from('{{ table }}')
-		->where('{{ column }}', \$value, EQUAL)
+		->where(Pdbc::Where->new('{{ column }}', \$value, EQUAL))
 		->get_single_result();
 	return {{ entity_package }}->new(%\$result);
 }
