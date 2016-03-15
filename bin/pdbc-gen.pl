@@ -21,8 +21,8 @@ use strict;
 use warnings FATAL => 'all';
 
 use Getopt::Std;
-our ($opt_h, $opt_p, $opt_f);
-getopts('h:p:f');
+our ($opt_h, $opt_p, $opt_f, $opt_d);
+getopts('h:p:fd:');
 
 use Pdbc::Generator;
 use Pdbc::Generator::Type;
@@ -36,12 +36,13 @@ use Term::ReadKey;
 use Test::More;
 
 unless($ARGV[1]){
-	print "Usage : perl [-h <HOST> -p <PORT>] <DATABASE> <OUTPUT_DIR>\n";
+	print "Usage : perl [-h <HOST> -p <PORT> -d <DRIVER>] <DATABASE> <OUTPUT_DIR>\n";
 	exit(-1);
 }
 
 my $host = defined $opt_h ? $opt_h : 'localhost';
 my $port = defined $opt_p ? $opt_p : 5432;
+my $driver = defined $opt_d ? $opt_d : 'Pg';
 my $database = $ARGV[0];
 
 
@@ -55,6 +56,7 @@ ReadMode "restore";
 print "\n";
 
 my $generator = Pdbc::Generator->new(
+	driver	=> $driver,
 	host	=> $host,
 	port	=> $port,
 	database=> $database,
@@ -66,6 +68,7 @@ $generator->connect();
 
 my @generated_packages;
 
+push @generated_packages, &generate(undef,  CONNECTION, $generator->build_connection());
 my $tables = $generator->get_tables();
 while(my $table = shift @$tables){
 	push @generated_packages, &generate($table, ENTITY, $generator->from($table)->build_entity());

@@ -9,20 +9,16 @@ our @EXPORT = qw();
 
 use DBI;
 use Pdbc::Record;
+use Pdbc::Connection;
 
 use Scalar::Util qw(blessed);
 
 sub new {
 	my $pkg = shift;
 	my $self = {
-		driver		=> 'Pg',
-		database	=> 'postgres',
-		host		=> 'localhost',
-		port		=> 5432,
-		user		=> 'postgres',
-		password	=> '',
 		@_
 	};
+	$self->{connection} = Pdbc::Connection->new(%$self) if(!defined $self->{connection});
 	&clear_condition($self);
 	return bless $self, $pkg;
 }
@@ -171,7 +167,7 @@ sub get_count {
 
 sub get_result {
 	my $self = shift;
-	my $sth = $self->{connect}->prepare($self->build_select_phrase());
+	my $sth = $self->{connection}->{handle}->prepare($self->build_select_phrase());
 	$sth->execute();
 	my @fields = @{$sth->{NAME}};
 	my %fields;
@@ -200,7 +196,7 @@ sub get_columns {
 		}
 
 		while(my $fetch_table = shift @fetch_tables){
-			my $sth = $self->{connect}->column_info(undef, undef, $fetch_table, undef);
+			my $sth = $self->{connection}->{handle}->column_info(undef, undef, $fetch_table, undef);
 			my $records = $sth->fetchall_arrayref(+{});
 			while(my $record = shift @$records){
 				push @col, $record->{COLUMN_NAME} if $record->{COLUMN_NAME};
@@ -219,19 +215,12 @@ sub get_columns {
 
 sub connect {
 	my $self = shift;
-	my $dbh = DBI->connect("dbi:$self->{driver}:dbname=$self->{database};host=$self->{host};port=$self->{port}",
-		$self->{user},
-		$self->{password},
-		{ AutoCommit => 0 }
-	) or die"データベースに接続できませんでした.";
-	$self->{connect} = $dbh;
+	$self->{connection}->open;
 }
 
 sub disconnect {
 	my $self = shift;
-	my $dbh = $self->{connect};
-	$dbh->disconnect();
-	delete $self->{connect};
+	$self->{connection}->close;
 }
 
 sub clear_condition {

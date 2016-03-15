@@ -16,7 +16,7 @@ use List::MoreUtils;
 sub get_tables {
 	my $self = shift;
 	my @tables;
-	my $sth = $self->{connect}->table_info(undef, "public", undef, "TABLE");
+	my $sth = $self->{connection}->{handle}->table_info(undef, "public", undef, "TABLE");
 	my $records = $sth->fetchall_arrayref(+{}) if defined($sth);
 	while(my $record = shift @$records){
 		push @tables, $record->{TABLE_NAME};
@@ -27,7 +27,7 @@ sub get_tables {
 sub get_columns_info {
 	my $self = shift;
 	my @columns_info;
-	my $sth = $self->{connect}->column_info(undef, undef, $self->{from}, undef);
+	my $sth = $self->{connection}->{handle}->column_info(undef, undef, $self->{from}, undef);
 	my $columns = $sth->fetchall_arrayref(+{});
 	for my $column (@$columns){
 		my $is_integer = ($column->{TYPE_NAME} =~ /.*(int|serial).*/m);
@@ -52,8 +52,8 @@ sub build_package_name {
 	(my $package = $self->{database}) =~ s/([A-Z])/::$1/g;
 	$package =~ s/^:://;
 	$package =~ s/^([a-z])/\u$1/;
-	(my $class = $self->{from}) =~ s/(_|^)(.)/\u$2/g;
-	return "$package\::$type->{package}\::$class$type->{surfix}";
+	(my $class = $self->{from}) =~ s/(_|^)(.)/\u$2/g if($self->{from});
+	return defined $type->{surfix} ? "$package\::$type->{package}\::$class$type->{surfix}" : "$package\::$type->{package}";
 }
 
 sub get_default_values {
@@ -118,7 +118,7 @@ sub get_foreign_keys {
 	my ($base, $current_loop) = @_;
 	$current_loop = 1 unless($current_loop);
 	my $result;
-	my $sth = $self->{connect}->foreign_key_info(undef, undef, undef, undef, undef, $self->{from});
+	my $sth = $self->{connection}->{handle}->foreign_key_info(undef, undef, undef, undef, undef, $self->{from});
 	my $records = $sth->fetchall_arrayref(+{}) if defined($sth);
 	while(my $record = shift @$records){
 		next if($base eq $record->{UK_TABLE_NAME});
@@ -155,7 +155,7 @@ sub get_referenced_keys {
 	my ($base, $current_loop) = @_;
 	$current_loop = 1 unless($current_loop);
 	my @tables;
-	my $sth = $self->{connect}->foreign_key_info(undef, undef, $self->{from}, undef, undef, undef);
+	my $sth = $self->{connection}->{handle}->foreign_key_info(undef, undef, $self->{from}, undef, undef, undef);
 	my $records = $sth->fetchall_arrayref(+{}) if defined($sth);
 	while(my $record = shift @$records){
 		push @tables, $record->{FK_TABLE_NAME};
@@ -163,7 +163,7 @@ sub get_referenced_keys {
 	@tables = List::MoreUtils::uniq @tables;
 	my $result;
 	while(my $table = shift @tables){
-		$sth = $self->{connect}->foreign_key_info(undef, undef, $self->{from}, undef, undef, $table);
+		$sth = $self->{connection}->{handle}->foreign_key_info(undef, undef, $self->{from}, undef, undef, $table);
 		$records = $sth->fetchall_arrayref(+{}) if defined($sth);
 		while(my $record = shift @$records){
 			next if($base eq $record->{FK_TABLE_NAME});
@@ -199,7 +199,7 @@ sub get_primary_keys {
 	my $self = shift;
 
 	my @primary_keys;
-	my $sth = $self->{connect}->primary_key_info(undef, undef, $self->{from});
+	my $sth = $self->{connection}->{handle}->primary_key_info(undef, undef, $self->{from});
 	return \@primary_keys unless($sth);
 	my $records = $sth->fetchall_arrayref(+{});
 	while( my $record = shift @$records){
@@ -229,10 +229,9 @@ sub build_entity {
 		});
 }
 
-sub build_repository {
+sub build_connection {
 	my $self = shift;
-
-	my $package = $self->build_package_name(REPOSITORY);
+	my $package = $self->build_package_name(CONNECTION);
 	my $constractor = [
 		{name => 'driver', value => $self->{driver}},
 		{name => 'host', value => $self->{host}},
@@ -241,13 +240,23 @@ sub build_repository {
 		{name => 'user', value => $self->{user}},
 		{name => 'password', value => $self->{password}}
 	];
+	my $mustache = Template::Mustache->new();
+	return $mustache->render(CONNECTION_TMP, {
+			package		=> $package,
+			constractor => $constractor,
+		});
+}
 
+sub build_repository {
+	my $self = shift;
+
+	my $package = $self->build_package_name(REPOSITORY);
 	my $mustache = Template::Mustache->new();
 	return $mustache->render(REPOSITORY_TMP, {
 			package		=> $package,
-			constractor	=> $constractor,
 			primary_keys	=> $self->get_primary_keys(),
 			table		=> $self->{from},
+			connection_package => $self->build_package_name(CONNECTION),
 			entity_package => $self->build_package_name(ENTITY)
 		});
 }

@@ -5,7 +5,7 @@ use warnings FATAL => 'all';
 
 use Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT = qw(ENTITY_TMP REPOSITORY_TMP SERVICE_TMP FOREIGN_TMP);
+our @EXPORT = qw(ENTITY_TMP REPOSITORY_TMP SERVICE_TMP FOREIGN_TMP CONNECTION_TMP);
 
 sub ENTITY_TMP {
 	return <<"EOS";
@@ -95,6 +95,30 @@ sub convert_to_table_data {
 EOS
 }
 
+sub CONNECTION_TMP {
+	return <<"EOS";
+package {{ package }};
+
+use strict;
+use warnings;
+
+use Pdbc::Connection;
+our \@ISA = qw(Pdbc::Connection);
+
+sub new {
+	my \$pkg = shift;
+	my \$self = {
+		{{# constractor }}
+		{{ name }} => '{{ value }}',
+		{{/ constractor }}
+		\@_
+	};
+	return bless \$self, ref(\$pkg) || \$pkg;
+}
+
+EOS
+};
+
 sub REPOSITORY_TMP {
 	return <<"EOS";
 package {{ package }};
@@ -107,16 +131,15 @@ our \@ISA = qw(Pdbc::PdbcManager);
 
 use Pdbc::Where::Operator;
 use {{ entity_package }};
+use {{ connection_package }};
 use Scalar::Util;
 
 sub new {
 	my \$pkg = shift;
 	my \$self = {
-		{{# constractor }}
-		{{ name }} => '{{ value }}',
-		{{/ constractor }}
 		\@_
 	};
+	\$self->{connection} = {{ connection_package }}->new(\%\$self) if(!defined \$self->{connection});
 	return bless \$self, ref(\$pkg) || \$pkg;
 }
 
@@ -134,10 +157,10 @@ sub find_by_{{ column }} {
 sub find_all {
 	my \$self = shift;
 	my (\$options) = \@_;
-	my \$result = \$self->from('{{ table }}')
+	my \$results = \$self->from('{{ table }}')
 		->get_result_list();
 	my \@records;
-	while(my \$result = shift \@\$result){
+	while(my \$result = shift \@\$results){
 		push \@records, {{ entity_package }}->new(%\$result);
 	}
 	return \\\@records;
@@ -150,11 +173,11 @@ sub find_by_condition {
 	if(!defined \$blessed || \$blessed ne 'Pdbc::Where'){
 		die"引数は Pdbc::Where のインスタンスである必要があります";
 	}
-	my \$result = \$self->from('{{ table }}')
+	my \$results = \$self->from('{{ table }}')
 		->where(\$where)
 		->get_result_list();
 	my \@records;
-	while(my \$result = shift \@\$result){
+	while(my \$result = shift \@\$results){
 		push \@records, {{ entity_package }}->new(%\$result);
 	}
 	return \\\@records;
