@@ -198,6 +198,7 @@ sub new {
 	my \$pkg = shift;
 	my \$self = {
 		standard_conforming_strings => 1,
+		default_escape => 1,
 		\@_
 	};
 	my \$repository = {{ repository_package }}->new(\%{\$self->{repository}});
@@ -222,7 +223,7 @@ sub search {
 
 sub get_insert_phrase {
 	my \$self = shift;
-	my (\$entity) = \@_;
+	my (\$entity, \$conf) = \@_;
 	my \$blessed = Scalar::Util::blessed \$entity;
 	if(!defined \$blessed || \$blessed ne '{{ entity_package }}'){
 		die"引数は {{ entity_package }} のインスタンスである必要があります";
@@ -234,8 +235,12 @@ sub get_insert_phrase {
 		push \@columns, \$column;
 		if(!defined \$value){
 			\$value = "NULL";
-		} elsif(\$value !~ /^.+\\(.*\\)\$/m && \$value !~ /^'.*'\$/m){
-			\$value =~ s/'/''/;
+		} elsif((\$self->{default_escape} && !grep {\$_ eq \$column} \@{\$conf->{no_escape_columns}}) || (!\$self->{default_escape} && grep {\$_ eq \$column} \@{\$conf->{escape_columns}})){
+			if(\$self->{standard_conforming_strings}){
+				\$value =~ s/'/\\\\'/;
+			} else {
+				\$value =~ s/'/''/;
+			}
 			\$value = \$self->{standard_conforming_strings} ? "E'\$value'"  : "'\$value'";
 		}
 		push \@values, \$value;
@@ -246,7 +251,7 @@ sub get_insert_phrase {
 {{# has_pkey }}
 sub get_update_phrase {
 	my \$self = shift;
-	my (\$entity) = \@_;
+	my (\$entity, \$conf) = \@_;
 	my \$blessed = Scalar::Util::blessed \$entity;
 	if(!defined \$blessed || \$blessed ne '{{ entity_package }}'){
 		die"引数は {{ entity_package }} のインスタンスである必要があります";
@@ -258,8 +263,12 @@ sub get_update_phrase {
 		push \@columns, \$column;
 		if(!defined \$value){
 			\$value = "NULL";
-		} elsif(\$value !~ /^.+\\(.*\\)\$/m && \$value !~ /^'.*'\$/m){
-			\$value =~ s/'/''/;
+		} elsif((\$self->{default_escape} && !grep {\$_ eq \$column} \@{\$conf->{no_escape_columns}}) || (!\$self->{default_escape} && grep {\$_ eq \$column} \@{\$conf->{escape_columns}})){
+			if(\$self->{standard_conforming_strings}){
+				\$value =~ s/'/\\\\'/;
+			} else {
+				\$value =~ s/'/''/;
+			}
 			\$value = \$self->{standard_conforming_strings} ? "E'\$value'"  : "'\$value'";
 		}
 		push \@values, \$value;
