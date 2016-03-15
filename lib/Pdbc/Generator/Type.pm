@@ -5,7 +5,7 @@ use warnings FATAL => 'all';
 
 use Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT = qw(ENTITY SERVICE REPOSITORY);
+our @EXPORT = qw(ENTITY SERVICE REPOSITORY CONNECTION);
 
 sub ENTITY {
 	return { package => 'Entity', surfix => '' };
@@ -17,6 +17,10 @@ sub SERVICE {
 
 sub REPOSITORY {
 	return { package => 'Repository', surfix => 'Repository' };
+}
+
+sub CONNECTION {
+	return { package => 'Connection', surfix => undef };
 }
 
 1;

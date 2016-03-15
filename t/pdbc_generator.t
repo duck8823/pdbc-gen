@@ -9,6 +9,5 @@ my $pdbcManager = Pdbc::Generator->new(
 	from	=> 'foo_bar'
 );
 isa_ok $pdbcManager, 'Pdbc::Generator';
-is $pdbcManager->build_package_name(),  'Test::Hoge::Hoge::FooBar';
 
 done_testing;
