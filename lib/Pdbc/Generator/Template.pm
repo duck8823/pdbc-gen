@@ -260,11 +260,11 @@ sub get_insert_phrase {
 			\$value = "NULL";
 		} elsif((\$self->{default_escape} && !grep {\$_ eq \$column} \@{\$conf->{no_escape_columns}}) || (!\$self->{default_escape} && grep {\$_ eq \$column} \@{\$conf->{escape_columns}})){
 			if(\$self->{standard_conforming_strings}){
-				\$value =~ s/'/\\'/g;
-				\$value =~ s/%/\\%/g;
-				\$value =~ s/_/\\_/g;
-				\$value =~ s/"/\\"/g;
 				\$value =~ s/\\\\/\\\\\\\\/g;
+				\$value =~ s/'/\\\\'/g;
+				\$value =~ s/%/\\\\%/g;
+				\$value =~ s/_/\\\\_/g;
+				\$value =~ s/"/\\\\"/g;
 			} else {
 				\$value =~ s/'/''/g;
 			}
@@ -292,11 +292,11 @@ sub get_update_phrase {
 			\$value = "NULL";
 		} elsif((\$self->{default_escape} && !grep {\$_ eq \$column} \@{\$conf->{no_escape_columns}}) || (!\$self->{default_escape} && grep {\$_ eq \$column} \@{\$conf->{escape_columns}})){
 			if(\$self->{standard_conforming_strings}){
-				\$value =~ s/'/\\'/g;
-				\$value =~ s/%/\\%/g;
-				\$value =~ s/_/\\_/g;
-				\$value =~ s/"/\\"/g;
 				\$value =~ s/\\\\/\\\\\\\\/g;
+				\$value =~ s/'/\\\\'/g;
+				\$value =~ s/%/\\\\%/g;
+				\$value =~ s/_/\\\\_/g;
+				\$value =~ s/"/\\\\"/g;
 			} else {
 				\$value =~ s/'/''/g;
 			}
