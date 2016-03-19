@@ -224,14 +224,15 @@ sub new {
 		default_escape => 1,
 		\@_
 	};
-	my \$repository = {{ repository_package }}->new(\%{\$self->{repository}});
-	\$self->{repository} = \$repository;
+	\$self->{connection} = {{ connection_package }}->new(\%\$self);
+	\$self->{repository} = {{ repository_package }}->new(\%{\$self->{repository}}, connection => \$self->{connection});
 	return bless \$self, ref(\$pkg) || \$pkg;
 }
 
 sub search {
 	my \$self = shift;
-	\$self->{repository}->connect();
+	my \$connection = \$self->{connection};
+	\$connection->open;
 	my (\$where, \$options) = \@_;
 	my \${{ table }}s = \$self->{repository}->find_by_condition(\$where, \$options);
 	for my \${{ table }}(\@\${{ table }}s){
@@ -240,7 +241,7 @@ sub search {
 		{{/ foreign_variables }}
 {{{ foreign_bind }}}
 	}
-	\$self->{repository}->disconnect();
+	\$connection->close;
 	return \${{ table }}s;
 }
 
@@ -346,10 +347,8 @@ return <<"EOS";
 		for \$<%& root %> (\@{\$<%& parent %>}){
 		<%={{ }}=%>
 		{{/ parent }}
-		\${{ ref_table }}_repository = {{ ref_repository }}->new();
-		\${{ ref_table }}_repository->connect();
+		\${{ ref_table }}_repository = {{ ref_repository }}->new(connection => \$connection);
 		\${{ ref_table }} = \${{ ref_table }}_repository->find_by_condition(Pdbc::Where->new('{{ ref_column }}', {{{ ref_value }}}, EQUAL)) if({{{ ref_value }}});
-		\${{ ref_table }}_repository->disconnect();
 		{{=<% %>=}}
 		\$<%& root %>->{<%& ref_table %>} = \$<%& ref_table %>;
 		<%={{ }}=%>

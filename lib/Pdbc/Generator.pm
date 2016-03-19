@@ -304,6 +304,7 @@ sub build_service {
 			foreign_bind=> $foreign_bind,
 			entity_package => $entity_package,
 			repository_package => $repository_package,
+			connection_package => $self->build_package_name(CONNECTION),
 			foreign_packages => \@foreign_packages,
 			foreign_variables => $foreign_valiables
 		});
