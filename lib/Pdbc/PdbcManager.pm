@@ -126,13 +126,13 @@ sub build_select_phrase {
 	if(defined $self->{left_outer_join}){
 		for(my $i = 0; $i < @{$self->{left_outer_join}}; $i++){
 			my $join = ${$self->{left_outer_join}}[$i];
-			$left_outer_join .= "LEFT OUTER JOIN " . $join->{table} . " ON " . $join->{where}->get_phrase(value => 0) . " ";
+			$left_outer_join .= " LEFT OUTER JOIN " . $join->{table} . " ON " . $join->{where}->get_phrase(value => 0) . " ";
 		}
 	}
 	if(defined $self->{inner_join}){
 		for(my $i = 0; $i < @{$self->{inner_join}}; $i++){
 			my $join = ${$self->{inner_join}}[$i];
-			$left_outer_join .= "INNER JOIN " . $join->{table} . " ON " . $join->{where}->get_phrase(value => 0) . " ";
+			$left_outer_join .= " INNER JOIN " . $join->{table} . " ON " . $join->{where}->get_phrase(value => 0) . " ";
 		}
 	}
 	my $columns = defined $self->{includes} ? join(", ", @{$self->{includes}}) : join(", ", @{$self->get_columns()});
