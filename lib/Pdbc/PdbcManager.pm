@@ -98,6 +98,12 @@ sub order {
 	die"カラムの指定が間違っています $column";
 }
 
+sub distinct {
+	my $self = shift;
+	$self->{distinct} = 1;
+	return $self;
+}
+
 sub limit {
 	my $self = shift;
 	my ($limit) = @_;
@@ -135,6 +141,10 @@ sub build_select_phrase {
 	my $offset = defined $self->{offset} ? " OFFSET " . $self->{offset}  : '';
 	my $limit  = defined $self->{limit}  ? " LIMIT "  . $self->{limit}   : '';
 	my $order  = defined $self->{order}  ? " ORDER BY " . $self->{order}->{column} . " " . $self->{order}->{asc_or_desc} : '';
+
+	if($self->{distinct}){
+		$columns = "DISTINCT $columns";
+	}
 
 	my $sql = "SELECT $columns FROM $self->{from}$left_outer_join$where$order$offset$limit;";
 	print STDERR "$sql\n" if($self->{debug});
