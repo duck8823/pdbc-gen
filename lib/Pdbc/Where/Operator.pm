@@ -52,6 +52,34 @@ sub LIKE {
 	);
 }
 
+sub GRATER_THAN {
+	return Pdbc::Where::Operator->new(
+		operator => ">",
+		need_right => 1
+	);
+}
+
+sub GRATER_EQUAL {
+	return Pdbc::Where::Operator->new(
+		operator => ">=",
+		need_right => 1
+	);
+}
+
+sub LESS_THAN {
+	return Pdbc::Where::Operator->new(
+		operator => "<",
+		need_right => 1
+	);
+}
+
+sub LESS_EQUAL {
+	return Pdbc::Where::Operator->new(
+		operator => "<=",
+		need_right => 1
+	);
+}
+
 sub get_operator {
 	my $self = shift;
 	return $self->{operator};
