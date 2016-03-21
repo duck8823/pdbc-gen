@@ -5,7 +5,7 @@ use warnings FATAL => 'all';
 
 use Exporter;
 our @ISA = qw(Exporter);
-our @EXPORT = qw(EQUAL NOT_EQUAL NOT_NULL NULL LIKE);
+our @EXPORT = qw(EQUAL NOT_EQUAL NOT_NULL NULL LIKE GRATER_THAN GRATER_EQUAL LESS_THAN LESS_EQUAL);
 
 sub new {
 	my $pkg = shift;
@@ -48,6 +48,34 @@ sub NULL {
 sub LIKE {
 	return Pdbc::Where::Operator->new(
 		operator => "LIKE",
+		need_right => 1
+	);
+}
+
+sub GRATER_THAN {
+	return Pdbc::Where::Operator->new(
+		operator => ">",
+		need_right => 1
+	);
+}
+
+sub GRATER_EQUAL {
+	return Pdbc::Where::Operator->new(
+		operator => ">=",
+		need_right => 1
+	);
+}
+
+sub LESS_THAN {
+	return Pdbc::Where::Operator->new(
+		operator => "<",
+		need_right => 1
+	);
+}
+
+sub LESS_EQUAL {
+	return Pdbc::Where::Operator->new(
+		operator => "<=",
 		need_right => 1
 	);
 }
