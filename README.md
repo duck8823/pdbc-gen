@@ -95,6 +95,13 @@ my $records = $pdbc_manager->from('table')
 						->limit(1)
 						->get_result_list();
 ```  
+### 重複業の削除
+```perl
+my $records = $pdbc_managet->from('table')
+						->distinct()
+						->includes('column')
+						->get_result_list();
+```
   
   
 # pdbc-gen  
