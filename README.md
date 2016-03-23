@@ -206,18 +206,21 @@ sub search {
 }
 
 sub get_insert_phrase {
+	my $self = shift;
 	my ($entity) = @_;
 	...
 	return "INSERT文";
 }
 
 sub get_update_phrase {
+	my $self = shift;
 	my ($entity) = @_;
 	...
 	return "UPDATE文 WHERE プライマリキー";
 }
 
 sub get_delete_phrase {
+	my $self = shift;
 	my ($entity) = @_;
 	return "DELETE文 FROM hoge WHERE プライマリキー";
 }
@@ -228,14 +231,15 @@ sub get_delete_phrase {
 エンティティオブジェクトの生成とINSERT文の組み立て
 ```perl
 use Hoge::Enyity::FooBar;
-use Hoge::Service::FooBarService qw(get_insert_phrase);
+use Hoge::Service::FooBarService;
 
 my $entity = Hoge::Entity::FooBar->new(
 	column_1 => 'hoge_1',
 	column_2 => 'hoge_2'
 );
 
-print get_insert_phrase($entity) . "\n";
+my $service = Hoge::Service::FooBarService->new();
+print $service->get_insert_phrase($entity) . "\n";
 ```
   
 ```sh
@@ -248,13 +252,13 @@ INSERT INTO foo_bar (primary_key, column_1, column_2) VALUES ('default_value', '
 use Pdbc::Where;
 use Pdbc::Where::Operator;
 
-use Hoge::Service::FooBarService qw(get_update_phrase);
+use Hoge::Service::FooBarService;
 
 my $foo_bar_service = Hoge::Service::FooBarService->new();
 my $entities = $foo_bar_service->search(Pdbc::Where->new('column_1', 'hoge_1', EQUAL));
 for my $entity (@$entities){
 	$entity->set_column_1('foo_1');
-	print get_update_phrase($entity);
+	print $foo_bar_service->get_update_phrase($entity);
 }
 ```
 ```sh
